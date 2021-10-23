@@ -39,7 +39,7 @@ func (c *captcha) HTML() template.HTML {
 	return template.HTML(
 		fmt.Sprintf(`
 <a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('.%[1]simage.jpeg?refresh=true')" src=".%[1]simage.jpeg">
+	<img onclick="this.src=('%[1]simage.jpeg?refresh=true')" src="%[1]simage.jpeg">
 </a>`,
 			c.urlPrefix),
 	)
