@@ -15,7 +15,37 @@ The minimum requirement of Go is **1.16**.
 
 ## Getting started
 
-TBD
+```html
+<!-- templates/home.tmpl -->
+<form>
+  {{.CaptchaHTML}}
+</form>
+```
+
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/flamego/captcha"
+	"github.com/flamego/flamego"
+	"github.com/flamego/session"
+	"github.com/flamego/template"
+)
+
+func main() {
+	f := flamego.Classic()
+	f.Use(session.Sessioner())
+	f.Use(captcha.Captchaer())
+	f.Use(template.Templater())
+	f.Get("/", func(t template.Template, data template.Data, captcha captcha.Captcha) {
+		data["CaptchaHTML"] = captcha.HTML()
+		t.HTML(http.StatusOK, "home")
+	})
+	f.Run()
+}
+```
 
 ## License
 
