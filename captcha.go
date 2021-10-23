@@ -5,6 +5,8 @@
 package captcha
 
 import (
+	"fmt"
+	"html/template"
 	"image/color"
 	"net/http"
 	"reflect"
@@ -20,6 +22,8 @@ import (
 // Captcha represents a captcha service and is used to validate text in captcha
 // images.
 type Captcha interface {
+	// HTML returns the HTML content to display and refresh captcha images.
+	HTML() template.HTML
 	// ValidText validates the passed text against the secret text.
 	ValidText(t string) bool
 }
@@ -27,7 +31,18 @@ type Captcha interface {
 var _ Captcha = (*captcha)(nil)
 
 type captcha struct {
-	session session.Session
+	session   session.Session
+	urlPrefix string
+}
+
+func (c *captcha) HTML() template.HTML {
+	return template.HTML(
+		fmt.Sprintf(`
+<a class="captcha" href="javascript:" tabindex="-1">
+	<img onclick="this.src=('.%[1]simage.jpeg?refresh=true')" src=".%[1]simage.jpeg">
+</a>`,
+			c.urlPrefix),
+	)
 }
 
 const textKey = "flamego::captcha::text"
@@ -39,7 +54,7 @@ func (c *captcha) ValidText(t string) bool {
 	if !ok {
 		return false
 	}
-	return strings.Compare(want, t) == 0
+	return strings.EqualFold(want, t)
 }
 
 // Options contains options for the captcha.Captchaer middleware.
@@ -92,7 +107,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 		}
 
 		if opts.Height <= 0 {
-			opts.Width = 80
+			opts.Height = 80
 		}
 
 		if opts.DPI <= 0 {
@@ -104,7 +119,8 @@ func Captchaer(opts ...Options) flamego.Handler {
 	opt = parseOptions(opt)
 	return captchaInvoker(func(c flamego.Context, s session.Session) {
 		cpt := &captcha{
-			session: s,
+			session:   s,
+			urlPrefix: opt.URLPrefix,
 		}
 		c.MapTo(cpt, (*Captcha)(nil))
 
@@ -136,6 +152,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 			panic("captcha: create image: " + err.Error())
 		}
 
+		c.ResponseWriter().Header().Set("Cache-Control", "no-store")
 		c.ResponseWriter().WriteHeader(http.StatusOK)
 		err = img.Encode(c.ResponseWriter())
 		if err != nil {
