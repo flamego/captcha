@@ -17,8 +17,10 @@ The minimum requirement of Go is **1.16**.
 
 ```html
 <!-- templates/home.tmpl -->
-<form>
-  {{.CaptchaHTML}}
+<form method="POST">
+  {{.CaptchaHTML}} <br>
+  <input name="captcha">
+  <button>Submit</button>
 </form>
 ```
 
@@ -39,10 +41,21 @@ func main() {
 	f.Use(session.Sessioner())
 	f.Use(captcha.Captchaer())
 	f.Use(template.Templater())
+
 	f.Get("/", func(t template.Template, data template.Data, captcha captcha.Captcha) {
 		data["CaptchaHTML"] = captcha.HTML()
 		t.HTML(http.StatusOK, "home")
 	})
+	f.Post("/", func(c flamego.Context, captcha captcha.Captcha) {
+		if !captcha.ValidText(c.Request().FormValue("captcha")) {
+			c.ResponseWriter().WriteHeader(http.StatusBadRequest)
+			_, _ = c.ResponseWriter().Write([]byte(http.StatusText(http.StatusBadRequest)))
+		} else {
+			c.ResponseWriter().WriteHeader(http.StatusOK)
+			_, _ = c.ResponseWriter().Write([]byte(http.StatusText(http.StatusOK)))
+		}
+	})
+
 	f.Run()
 }
 ```
