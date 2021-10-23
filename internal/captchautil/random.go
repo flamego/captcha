@@ -30,16 +30,19 @@ func randomDeepColor() color.RGBA {
 func randomColor() color.RGBA {
 	red := r.Intn(255)
 	green := r.Intn(255)
-	blue := r.Intn(255)
-	if (red + green) > 400 {
-		blue = 0
-	} else {
+	blue := 0
+	if (red + green) <= 400 {
 		blue = 400 - green - red
 	}
 	if blue > 255 {
 		blue = 255
 	}
-	return color.RGBA{R: uint8(red), G: uint8(green), B: uint8(blue), A: uint8(255)}
+	return color.RGBA{
+		R: uint8(red),
+		G: uint8(green),
+		B: uint8(blue),
+		A: uint8(255),
+	}
 }
 
 // RandomLightColor returns a random light color.

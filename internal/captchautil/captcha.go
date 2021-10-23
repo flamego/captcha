@@ -212,7 +212,7 @@ func Curve() Option {
 		b := random(int64(-img.height/4), int64(img.height/4)) // Y-axis offset
 		f := random(int64(-img.height/4), int64(img.height/4)) // X-axis offset
 		// Period
-		var t float64 = 0
+		var t float64
 		if img.height > img.width/2 {
 			t = random(int64(img.width/2), int64(img.height))
 		} else {
