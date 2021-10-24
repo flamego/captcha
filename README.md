@@ -1,4 +1,4 @@
-# auth
+# captcha
 
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/flamego/captcha/Go?logo=github&style=for-the-badge)](https://github.com/flamego/captcha/actions?query=workflow%3AGo)
 [![Codecov](https://img.shields.io/codecov/c/gh/flamego/captcha?logo=codecov&style=for-the-badge)](https://app.codecov.io/gh/flamego/captcha)
