@@ -60,6 +60,10 @@ func main() {
 }
 ```
 
+## Getting help
+
+- Please [file an issue](https://github.com/flamego/flamego/issues) or [start a discussion](https://github.com/flamego/flamego/discussions) on the [flamego/flamego](https://github.com/flamego/flamego) repository.
+
 ## License
 
 This project is under the MIT License. See the [LICENSE](LICENSE) file for the full license text.
