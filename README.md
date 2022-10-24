@@ -9,7 +9,7 @@ Package captcha is a middleware that provides captcha service for [Flamego](http
 
 ## Installation
 
-The minimum requirement of Go is **1.16**.
+The minimum requirement of Go is **1.18**.
 
 	go get github.com/flamego/captcha
 
