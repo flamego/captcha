@@ -3,7 +3,7 @@ module github.com/flamego/captcha
 go 1.18
 
 require (
-	github.com/flamego/flamego v1.8.0
+	github.com/flamego/flamego v1.8.1
 	github.com/flamego/session v1.2.2
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/pkg/errors v0.9.1
@@ -14,7 +14,7 @@ require (
 require (
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/charmbracelet/lipgloss v0.6.0 // indirect
-	github.com/charmbracelet/log v0.1.1 // indirect
+	github.com/charmbracelet/log v0.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
