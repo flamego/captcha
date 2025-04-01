@@ -3,7 +3,7 @@ module github.com/flamego/captcha
 go 1.18
 
 require (
-	github.com/flamego/flamego v1.9.5
+	github.com/flamego/flamego v1.9.6
 	github.com/flamego/session v1.6.5
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/pkg/errors v0.9.1

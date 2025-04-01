@@ -10,8 +10,8 @@ github.com/charmbracelet/log v0.4.0 h1:G9bQAcx8rWA2T3pWvx7YtPTPwgqpk7D68BX21IRW8
 github.com/charmbracelet/log v0.4.0/go.mod h1:63bXt/djrizTec0l11H20t8FDSvA4CRZJ1KH22MdptM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/flamego/flamego v1.9.5 h1:GbUHZ58bEaI6MfiC8SAaRR96VEHDGjA1dZVWN3qtmEQ=
-github.com/flamego/flamego v1.9.5/go.mod h1:n1CMZUtcP30xeJJ+di9E+wrfWWzptAxjkKabIV806to=
+github.com/flamego/flamego v1.9.6 h1:9HgCcWLoImy4zkdHVvTjEJoR5NMZn4B8W8uM6c+ABCs=
+github.com/flamego/flamego v1.9.6/go.mod h1:n1CMZUtcP30xeJJ+di9E+wrfWWzptAxjkKabIV806to=
 github.com/flamego/session v1.6.5 h1:YlQfMGjV84JcGihg5OjufKP5qOh/05iOfHYrf5qta5I=
 github.com/flamego/session v1.6.5/go.mod h1:EhBKxrWSmkqa2XwQSC6WbwXn7pLzyFY0BREtTwJBpQU=
 github.com/go-logfmt/logfmt v0.6.0 h1:wGYYu3uicYdqXVgoYbvnkrPVXkuLM1p1ifugDMEdRi4=
