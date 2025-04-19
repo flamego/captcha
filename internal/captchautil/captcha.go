@@ -71,11 +71,12 @@ func (img *Image) Encode(w io.Writer) error {
 func Noise(complex Complexity) Option {
 	return func(img *Image) error {
 		density := 18
-		if complex == ComplexityLow {
+		switch complex {
+		case ComplexityLow:
 			density = 28
-		} else if complex == ComplexityMedium {
+		case ComplexityMedium:
 			density = 18
-		} else if complex == ComplexityHigh {
+		case ComplexityHigh:
 			density = 8
 		}
 		maxSize := (img.height * img.width) / density
@@ -96,11 +97,12 @@ func Noise(complex Complexity) Option {
 func TextNoise(complex Complexity) Option {
 	return func(img *Image) error {
 		density := 1500
-		if complex == ComplexityLow {
+		switch complex {
+		case ComplexityLow:
 			density = 2000
-		} else if complex == ComplexityMedium {
+		case ComplexityMedium:
 			density = 1500
-		} else if complex == ComplexityHigh {
+		case ComplexityHigh:
 			density = 1000
 		}
 		maxSize := (img.height * img.width) / density
