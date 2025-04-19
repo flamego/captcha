@@ -1,6 +1,6 @@
 module github.com/flamego/captcha
 
-go 1.18
+go 1.24
 
 require (
 	github.com/flamego/flamego v1.9.5
