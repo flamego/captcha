@@ -1,6 +1,6 @@
 module github.com/flamego/captcha
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/flamego/flamego v1.9.7
@@ -8,7 +8,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/image v0.29.0
+	golang.org/x/image v0.36.0
 )
 
 require (
