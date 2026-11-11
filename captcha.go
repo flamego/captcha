@@ -79,7 +79,7 @@ var _ inject.FastInvoker = (*captchaInvoker)(nil)
 // `func(flamego.Context, session.Session)`.
 type captchaInvoker func(flamego.Context, session.Session)
 
-func (invoke captchaInvoker) Invoke(args []interface{}) ([]reflect.Value, error) {
+func (invoke captchaInvoker) Invoke(args []any) ([]reflect.Value, error) {
 	invoke(args[0].(flamego.Context), args[1].(session.Session))
 	return nil, nil
 }
