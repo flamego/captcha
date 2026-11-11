@@ -80,7 +80,7 @@ func Noise(complex Complexity) Option {
 			density = 8
 		}
 		maxSize := (img.height * img.width) / density
-		for i := 0; i < maxSize; i++ {
+		for range maxSize {
 			rw := r.Intn(img.width)
 			rh := r.Intn(img.height)
 			img.nrgba.Set(rw, rh, randomColor())
@@ -114,7 +114,7 @@ func TextNoise(complex Complexity) Option {
 		c.SetHinting(font.HintingFull)
 		rawFontSize := float64(img.height) / (1 + float64(r.Intn(7))/float64(10))
 
-		for i := 0; i < maxSize; i++ {
+		for range maxSize {
 			text, err := RandomText(1)
 			if err != nil {
 				return errors.Wrap(err, "TextNoise: get random text")
@@ -231,7 +231,7 @@ func Curve() Option {
 		}
 
 		py := float64(0)
-		for px := 0; px < end; px++ {
+		for px := range end {
 			if w != 0 {
 				py = float64(a)*math.Sin(w*float64(px)+f) + b + (float64(img.width) / float64(5))
 				i := img.height / 5
