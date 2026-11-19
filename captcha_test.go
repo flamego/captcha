@@ -85,7 +85,7 @@ func TestCaptchaer(t *testing.T) {
 
 	want := `
 <a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('/.captcha/image.png?refresh=true')" src="/.captcha/image.png">
+	<img onclick="this.src=('/.captcha/image.png?refresh=true&amp;t='+Date.now())" src="/.captcha/image.png">
 </a>`
 	assert.Equal(t, want, c.do(http.MethodGet, "/").Body.String())
 
