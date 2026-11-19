@@ -39,7 +39,7 @@ func (c *captcha) HTML() template.HTML {
 	return template.HTML(
 		fmt.Sprintf(`
 <a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('%[1]simage.jpeg?refresh=true')" src="%[1]simage.jpeg">
+	<img onclick="this.src=('%[1]simage.png?refresh=true')" src="%[1]simage.png">
 </a>`,
 			c.urlPrefix),
 	)
@@ -152,6 +152,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 			panic("captcha: create image: " + err.Error())
 		}
 
+		c.ResponseWriter().Header().Set("Content-Type", "image/png")
 		c.ResponseWriter().Header().Set("Cache-Control", "no-store")
 		c.ResponseWriter().WriteHeader(http.StatusOK)
 		err = img.Encode(c.ResponseWriter())

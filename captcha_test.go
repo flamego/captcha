@@ -7,6 +7,7 @@ package captcha
 import (
 	"bytes"
 	"html/template"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -24,10 +25,10 @@ func TestCaptchaer(t *testing.T) {
 	f.Use(session.Sessioner())
 	f.Use(Captchaer())
 
-	f.Get("/.captcha/image.jpeg", func(c Captcha) {
+	f.Get("/.captcha/image.png", func(c Captcha) {
 		want := template.HTML(`
 <a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('/.captcha/image.jpeg?refresh=true')" src="/.captcha/image.jpeg">
+	<img onclick="this.src=('/.captcha/image.png?refresh=true')" src="/.captcha/image.png">
 </a>`)
 		assert.Equal(t, want, c.HTML())
 	})
@@ -36,10 +37,14 @@ func TestCaptchaer(t *testing.T) {
 	})
 
 	resp := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/.captcha/image.jpeg", nil)
+	req, err := http.NewRequest("GET", "/.captcha/image.png", nil)
 	assert.Nil(t, err)
 
 	f.ServeHTTP(resp, req)
+
+	assert.Equal(t, "image/png", resp.Header().Get("Content-Type"))
+	_, err = png.Decode(resp.Body)
+	assert.Nil(t, err)
 
 	cookie := resp.Header().Get("Set-Cookie")
 
@@ -63,7 +68,7 @@ func TestCaptchaer_Concurrent(t *testing.T) {
 	for range 8 {
 		wg.Go(func() {
 			resp := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/.captcha/image.jpeg", nil)
+			req := httptest.NewRequest(http.MethodGet, "/.captcha/image.png", nil)
 			f.ServeHTTP(resp, req)
 			assert.Equal(t, http.StatusOK, resp.Code)
 		})

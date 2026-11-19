@@ -9,7 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
+	"image/png"
 	"io"
 	"math"
 	"math/rand/v2"
@@ -59,9 +59,9 @@ func CreateImage(width, height, dpi int, bgColor color.RGBA, opts ...Option) (*I
 	return img, nil
 }
 
-// Encode encodes the final JPEG image to the given writer.
+// Encode encodes the final PNG image to the given writer.
 func (img *Image) Encode(w io.Writer) error {
-	return jpeg.Encode(w, img.nrgba, &jpeg.Options{Quality: 100})
+	return png.Encode(w, img.nrgba)
 }
 
 // Noise draws background noise on the image.
