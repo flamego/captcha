@@ -90,88 +90,108 @@ func Noise(complex Complexity) Option {
 	}
 }
 
-// TextNoise draws background text noise on the image.
-func TextNoise(complex Complexity) Option {
-	return func(img *Image) error {
-		density := 1500
-		switch complex {
-		case ComplexityLow:
-			density = 2000
-		case ComplexityMedium:
-			density = 1500
-		case ComplexityHigh:
-			density = 1000
-		}
-		maxSize := (img.height * img.width) / density
-
-		c := freetype.NewContext()
-		c.SetDPI(img.dpi)
-		c.SetClip(img.nrgba.Bounds())
-		c.SetDst(img.nrgba)
-		c.SetHinting(font.HintingFull)
-		rawFontSize := float64(img.height) / (1 + float64(rand.IntN(7))/float64(10))
-
-		for range maxSize {
-			text, err := RandomText(1)
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: get random text")
-			}
-			fontSize := rawFontSize/2 + float64(rand.IntN(5))
-
-			c.SetSrc(image.NewUniform(RandomLightColor()))
-			c.SetFontSize(fontSize)
-
-			f, err := randFontFamily()
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: get random font family")
-			}
-			c.SetFont(f)
-
-			rw := rand.IntN(img.width)
-			rh := rand.IntN(img.height)
-			pt := freetype.Pt(rw, rh)
-
-			_, err = c.DrawString(text, pt)
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: draw string")
-			}
-		}
-		return nil
-	}
-}
-
-// Text draws text on the image.
+// Text draws text on the image. All characters share one color, sit close
+// enough to touch, have a line drawn through them, and are warped together, so
+// they are hard to split into single characters.
 func Text(text string) Option {
 	return func(img *Image) error {
+		if text == "" {
+			return nil
+		}
+
+		w, h := float64(img.width), float64(img.height)
+		layer := image.NewNRGBA(img.nrgba.Bounds())
+		ink := randomDeepColor()
+
 		c := freetype.NewContext()
 		c.SetDPI(img.dpi)
-		c.SetClip(img.nrgba.Bounds())
-		c.SetDst(img.nrgba)
+		c.SetClip(layer.Bounds())
+		c.SetDst(layer)
 		c.SetHinting(font.HintingFull)
+		c.SetSrc(image.NewUniform(ink))
 
-		fontWidth := img.width / len(text)
-		for i, s := range text {
-			fontSize := float64(img.height) / (1 + float64(rand.IntN(7))/float64(9))
-			c.SetSrc(image.NewUniform(randomDeepColor()))
-			c.SetFontSize(fontSize)
-
+		step := w * 0.8 / float64(len(text)) * 0.85 // 15% overlap
+		x := (w - step*float64(len(text))) / 2
+		for _, s := range text {
 			f, err := randFontFamily()
 			if err != nil {
 				return errors.Wrap(err, "Text: get random font family")
 			}
 			c.SetFont(f)
+			size := h * (0.62 + rand.Float64()*0.18)
+			c.SetFontSize(size)
 
-			x := (fontWidth)*i + (fontWidth)/int(fontSize)
-			y := 5 + rand.IntN(img.height/2) + int(fontSize/2)
-			pt := freetype.Pt(x, y)
-
-			_, err = c.DrawString(string(s), pt)
+			y := h/2 + size/3 + (rand.Float64()-0.5)*h*0.15
+			_, err = c.DrawString(string(s), freetype.Pt(int(x), int(y)))
 			if err != nil {
 				return errors.Wrap(err, "Text: draw string")
 			}
+			x += step
 		}
+
+		// Strike a wavy line through the characters in the same color.
+		amp := h * 0.08
+		period := w * (0.6 + rand.Float64()*0.4)
+		phase := rand.Float64() * 2 * math.Pi
+		mid := h/2 + (rand.Float64()-0.5)*h*0.2
+		for px := img.width / 12; px < img.width-img.width/12; px++ {
+			py := int(mid + amp*math.Sin(2*math.Pi*float64(px)/period+phase))
+			for t := -1; t <= 1; t++ {
+				layer.Set(px, py+t, ink)
+			}
+		}
+
+		draw.Draw(img.nrgba, img.nrgba.Bounds(), warp(layer, 4, 5), image.Point{}, draw.Over)
 		return nil
 	}
+}
+
+// warp displaces every pixel of src along two sine waves, up to ax pixels
+// horizontally and ay pixels vertically, sampling bilinearly.
+func warp(src *image.NRGBA, ax, ay float64) *image.NRGBA {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	dst := image.NewNRGBA(b)
+	periodX := float64(w) * (0.4 + rand.Float64()*0.3)
+	periodY := float64(h) * (0.8 + rand.Float64()*0.6)
+	phaseX, phaseY := rand.Float64()*2*math.Pi, rand.Float64()*2*math.Pi
+
+	at := func(x, y int) color.NRGBA {
+		if x < 0 || y < 0 || x >= w || y >= h {
+			return color.NRGBA{}
+		}
+		return src.NRGBAAt(x, y)
+	}
+	for y := range h {
+		for x := range w {
+			sx := float64(x) + ax*math.Sin(2*math.Pi*float64(y)/periodY+phaseX)
+			sy := float64(y) + ay*math.Sin(2*math.Pi*float64(x)/periodX+phaseY)
+			x0, y0 := int(math.Floor(sx)), int(math.Floor(sy))
+			fx, fy := sx-float64(x0), sy-float64(y0)
+
+			// Premultiply by alpha so transparent neighbors do not darken edges.
+			var r, g, bl, a float64
+			for _, s := range [4]struct {
+				c      color.NRGBA
+				weight float64
+			}{
+				{at(x0, y0), (1 - fx) * (1 - fy)},
+				{at(x0+1, y0), fx * (1 - fy)},
+				{at(x0, y0+1), (1 - fx) * fy},
+				{at(x0+1, y0+1), fx * fy},
+			} {
+				sa := float64(s.c.A) * s.weight
+				r += float64(s.c.R) * sa
+				g += float64(s.c.G) * sa
+				bl += float64(s.c.B) * sa
+				a += sa
+			}
+			if a > 0 {
+				dst.SetNRGBA(x, y, color.NRGBA{R: uint8(r / a), G: uint8(g / a), B: uint8(bl / a), A: uint8(a)})
+			}
+		}
+	}
+	return dst
 }
 
 // Border draws border on the image.
@@ -184,59 +204,6 @@ func Border(color color.RGBA) Option {
 		for y := 0; y < img.height; y++ {
 			img.nrgba.Set(0, y, color)
 			img.nrgba.Set(img.width-1, y, color)
-		}
-		return nil
-	}
-}
-
-// Curve draws a curve on the image.
-func Curve() Option {
-	return func(img *Image) error {
-		random := func(min, max int64) float64 {
-			decimal := rand.Float64()
-			if max <= 0 {
-				return (float64(rand.Int64N((min*-1)-(max*-1))+(max*-1)) + decimal) * -1
-			}
-			if min < 0 && max > 0 {
-				if rand.Int()%2 == 0 {
-					return float64(rand.Int64N(max)) + decimal
-				} else {
-					return (float64(rand.Int64N(min*-1)) + decimal) * -1
-				}
-			}
-			return float64(rand.Int64N(max-min)+min) + decimal
-		}
-
-		a := rand.IntN(img.height / 2)                         // Amplitude
-		b := random(int64(-img.height/4), int64(img.height/4)) // Y-axis offset
-		f := random(int64(-img.height/4), int64(img.height/4)) // X-axis offset
-		// Period
-		var t float64
-		if img.height > img.width/2 {
-			t = random(int64(img.width/2), int64(img.height))
-		} else {
-			t = random(int64(img.height), int64(img.width/2))
-		}
-		w := (2 * math.Pi) / t
-
-		end := int(random(int64(float64(img.width)*0.8), int64(img.width)))
-		c := color.RGBA{
-			R: uint8(rand.IntN(150)),
-			G: uint8(rand.IntN(150)),
-			B: uint8(rand.IntN(150)),
-			A: uint8(255),
-		}
-
-		py := float64(0)
-		for px := range end {
-			if w != 0 {
-				py = float64(a)*math.Sin(w*float64(px)+f) + b + (float64(img.width) / float64(5))
-				i := img.height / 5
-				for i > 0 {
-					img.nrgba.Set(px+i, int(py), c)
-					i--
-				}
-			}
 		}
 		return nil
 	}

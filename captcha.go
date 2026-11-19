@@ -141,9 +141,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 		img, err := captchautil.CreateImage(
 			opt.Width, opt.Height, opt.DPI, captchautil.RandomLightColor(),
 			captchautil.Noise(captchautil.ComplexityLow),
-			captchautil.TextNoise(captchautil.ComplexityLow),
 			captchautil.Text(text),
-			captchautil.Curve(),
 			captchautil.Border(
 				color.RGBA{R: 170, G: 170, B: 170, A: 255},
 			),
