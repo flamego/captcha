@@ -25,19 +25,23 @@ func TestCaptchaer(t *testing.T) {
 	f.Use(session.Sessioner())
 	f.Use(Captchaer())
 
-	f.Get("/.captcha/image.png", func(c Captcha) {
-		want := template.HTML(`
-<a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('/.captcha/image.png?refresh=true')" src="/.captcha/image.png">
-</a>`)
-		assert.Equal(t, want, c.HTML())
-	})
+	f.Get("/", func(c Captcha) template.HTML { return c.HTML() })
 	f.Post("/", func(s session.Session, c Captcha) string {
 		return strconv.FormatBool(c.ValidText(s.Get(textKey).(string)))
 	})
 
 	resp := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/.captcha/image.png", nil)
+	req, err := http.NewRequest(http.MethodGet, "/", nil)
+	assert.Nil(t, err)
+	f.ServeHTTP(resp, req)
+	want := `
+<a class="captcha" href="javascript:" tabindex="-1">
+	<img onclick="this.src=('/.captcha/image.png?refresh=true')" src="/.captcha/image.png">
+</a>`
+	assert.Equal(t, want, resp.Body.String())
+
+	resp = httptest.NewRecorder()
+	req, err = http.NewRequest(http.MethodGet, "/.captcha/image.png", nil)
 	assert.Nil(t, err)
 
 	f.ServeHTTP(resp, req)

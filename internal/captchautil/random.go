@@ -15,11 +15,11 @@ import (
 
 func randomDeepColor() color.RGBA {
 	randColor := randomColor()
-	increase := float64(30 + rand.IntN(255))
+	increase := float64(120 + rand.IntN(135))
 
-	red := math.Abs(math.Min(float64(randColor.R)-increase, 255))
-	green := math.Abs(math.Min(float64(randColor.G)-increase, 255))
-	blue := math.Abs(math.Min(float64(randColor.B)-increase, 255))
+	red := math.Max(float64(randColor.R)-increase, 0)
+	green := math.Max(float64(randColor.G)-increase, 0)
+	blue := math.Max(float64(randColor.B)-increase, 0)
 	return color.RGBA{
 		R: uint8(red),
 		G: uint8(green),
