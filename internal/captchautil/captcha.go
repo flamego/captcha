@@ -188,7 +188,12 @@ func warp(src *image.NRGBA, ax, ay float64) *image.NRGBA {
 				a += sa
 			}
 			if a > 0 {
-				dst.SetNRGBA(x, y, color.NRGBA{R: uint8(r / a), G: uint8(g / a), B: uint8(bl / a), A: uint8(a)})
+				dst.SetNRGBA(x, y, color.NRGBA{
+					R: uint8(math.Round(r / a)),
+					G: uint8(math.Round(g / a)),
+					B: uint8(math.Round(bl / a)),
+					A: uint8(math.Round(a)),
+				})
 			}
 		}
 	}
