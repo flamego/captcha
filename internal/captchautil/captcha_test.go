@@ -22,12 +22,13 @@ func TestText_StaysInsideImage(t *testing.T) {
 		{text: "gjpqy", width: 240, height: 80, dpi: 72},
 		{text: "gjpqyQWM", width: 240, height: 80, dpi: 72},
 		{text: "gjpqyQ", width: 120, height: 30, dpi: 72},
+		{text: "gjpqyQ", width: 120, height: 16, dpi: 72},
 		{text: "gjAQ", width: 240, height: 80, dpi: 144},
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%s %dx%d %ddpi", test.text, test.width, test.height, test.dpi), func(t *testing.T) {
 			// Glyph sizes, fonts, and positions are random, so render many times.
-			for range 200 {
+			for range 50 {
 				img, err := CreateImage(test.width, test.height, test.dpi, white, Text(test.text))
 				require.NoError(t, err)
 

@@ -176,7 +176,8 @@ func Text(text string) Option {
 			}
 		}
 
-		draw.Draw(img.nrgba, img.nrgba.Bounds(), warp(layer, 4, 5), image.Point{}, draw.Over)
+		// Warp less on small images so the margins still keep ink off the border.
+		draw.Draw(img.nrgba, img.nrgba.Bounds(), warp(layer, min(4, w/48), min(5, h/16)), image.Point{}, draw.Over)
 		return nil
 	}
 }
