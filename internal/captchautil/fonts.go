@@ -11,9 +11,8 @@ import (
 	"path"
 	"sync"
 
-	"github.com/golang/freetype"
-	"github.com/golang/freetype/truetype"
 	"github.com/pkg/errors"
+	"golang.org/x/image/font/opentype"
 )
 
 //go:embed fonts/*.ttf
@@ -21,12 +20,12 @@ var fonts embed.FS
 
 var (
 	fontFamilyNames []string
-	fontFamilies    map[string]*truetype.Font
+	fontFamilies    map[string]*opentype.Font
 	fontFamilyOnce  sync.Once
 	fontFamilyErr   error
 )
 
-func randFontFamily() (*truetype.Font, error) {
+func randFontFamily() (*opentype.Font, error) {
 	fontFamilyOnce.Do(func() {
 		files, err := fonts.ReadDir("fonts")
 		if err != nil {
@@ -35,7 +34,7 @@ func randFontFamily() (*truetype.Font, error) {
 		}
 
 		fontFamilyNames = make([]string, 0, len(files))
-		fontFamilies = make(map[string]*truetype.Font, len(files))
+		fontFamilies = make(map[string]*opentype.Font, len(files))
 		for _, fi := range files {
 			data, err := fonts.ReadFile(path.Join("fonts", fi.Name()))
 			if err != nil {
@@ -43,7 +42,7 @@ func randFontFamily() (*truetype.Font, error) {
 				return
 			}
 
-			f, err := freetype.ParseFont(data)
+			f, err := opentype.Parse(data)
 			if err != nil {
 				fontFamilyErr = errors.Wrapf(err, "parse font %q", fi.Name())
 				return

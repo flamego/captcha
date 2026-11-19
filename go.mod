@@ -5,7 +5,6 @@ go 1.26
 require (
 	github.com/flamego/flamego v1.14.1
 	github.com/flamego/session v1.6.5
-	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/image v0.29.0
@@ -33,4 +32,5 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 )

@@ -14,9 +14,10 @@ import (
 	"math"
 	"math/rand/v2"
 
-	"github.com/golang/freetype"
 	"github.com/pkg/errors"
 	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/math/fixed"
 )
 
 type Complexity int
@@ -103,13 +104,7 @@ func Text(text string) Option {
 		layer := image.NewNRGBA(img.nrgba.Bounds())
 		ink := randomDeepColor()
 
-		c := freetype.NewContext()
-		c.SetDPI(img.dpi)
-		c.SetClip(layer.Bounds())
-		c.SetDst(layer)
-		c.SetHinting(font.HintingFull)
-		c.SetSrc(image.NewUniform(ink))
-
+		d := &font.Drawer{Dst: layer, Src: image.NewUniform(ink)}
 		step := w * 0.8 / float64(len(text)) * 0.85 // 15% overlap
 		x := (w - step*float64(len(text))) / 2
 		for _, s := range text {
@@ -117,15 +112,21 @@ func Text(text string) Option {
 			if err != nil {
 				return errors.Wrap(err, "Text: get random font family")
 			}
-			c.SetFont(f)
 			size := h * (0.62 + rand.Float64()*0.18)
-			c.SetFontSize(size)
+			face, err := opentype.NewFace(f, &opentype.FaceOptions{
+				Size:    size,
+				DPI:     img.dpi,
+				Hinting: font.HintingFull,
+			})
+			if err != nil {
+				return errors.Wrap(err, "Text: create font face")
+			}
 
 			y := h/2 + size/3 + (rand.Float64()-0.5)*h*0.15
-			_, err = c.DrawString(string(s), freetype.Pt(int(x), int(y)))
-			if err != nil {
-				return errors.Wrap(err, "Text: draw string")
-			}
+			d.Face = face
+			d.Dot = fixed.P(int(x), int(y))
+			d.DrawString(string(s))
+			_ = face.Close()
 			x += step
 		}
 
