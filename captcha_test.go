@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,4 +52,21 @@ func TestCaptchaer(t *testing.T) {
 	f.ServeHTTP(resp, req)
 
 	assert.Equal(t, "true", resp.Body.String())
+}
+
+func TestCaptchaer_Concurrent(t *testing.T) {
+	f := flamego.NewWithLogger(&bytes.Buffer{})
+	f.Use(session.Sessioner())
+	f.Use(Captchaer())
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			resp := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/.captcha/image.jpeg", nil)
+			f.ServeHTTP(resp, req)
+			assert.Equal(t, http.StatusOK, resp.Code)
+		})
+	}
+	wg.Wait()
 }

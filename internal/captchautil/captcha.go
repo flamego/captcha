@@ -12,15 +12,12 @@ import (
 	"image/jpeg"
 	"io"
 	"math"
-	"math/rand"
-	"time"
+	"math/rand/v2"
 
 	"github.com/golang/freetype"
 	"github.com/pkg/errors"
 	"golang.org/x/image/font"
 )
-
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Complexity int
 
@@ -81,10 +78,10 @@ func Noise(complex Complexity) Option {
 		}
 		maxSize := (img.height * img.width) / density
 		for range maxSize {
-			rw := r.Intn(img.width)
-			rh := r.Intn(img.height)
+			rw := rand.IntN(img.width)
+			rh := rand.IntN(img.height)
 			img.nrgba.Set(rw, rh, randomColor())
-			size := r.Intn(maxSize)
+			size := rand.IntN(maxSize)
 			if size%3 == 0 {
 				img.nrgba.Set(rw+1, rh+1, randomColor())
 			}
@@ -112,14 +109,14 @@ func TextNoise(complex Complexity) Option {
 		c.SetClip(img.nrgba.Bounds())
 		c.SetDst(img.nrgba)
 		c.SetHinting(font.HintingFull)
-		rawFontSize := float64(img.height) / (1 + float64(r.Intn(7))/float64(10))
+		rawFontSize := float64(img.height) / (1 + float64(rand.IntN(7))/float64(10))
 
 		for range maxSize {
 			text, err := RandomText(1)
 			if err != nil {
 				return errors.Wrap(err, "TextNoise: get random text")
 			}
-			fontSize := rawFontSize/2 + float64(r.Intn(5))
+			fontSize := rawFontSize/2 + float64(rand.IntN(5))
 
 			c.SetSrc(image.NewUniform(RandomLightColor()))
 			c.SetFontSize(fontSize)
@@ -130,8 +127,8 @@ func TextNoise(complex Complexity) Option {
 			}
 			c.SetFont(f)
 
-			rw := r.Intn(img.width)
-			rh := r.Intn(img.height)
+			rw := rand.IntN(img.width)
+			rh := rand.IntN(img.height)
 			pt := freetype.Pt(rw, rh)
 
 			_, err = c.DrawString(text, pt)
@@ -154,7 +151,7 @@ func Text(text string) Option {
 
 		fontWidth := img.width / len(text)
 		for i, s := range text {
-			fontSize := float64(img.height) / (1 + float64(r.Intn(7))/float64(9))
+			fontSize := float64(img.height) / (1 + float64(rand.IntN(7))/float64(9))
 			c.SetSrc(image.NewUniform(randomDeepColor()))
 			c.SetFontSize(fontSize)
 
@@ -165,7 +162,7 @@ func Text(text string) Option {
 			c.SetFont(f)
 
 			x := (fontWidth)*i + (fontWidth)/int(fontSize)
-			y := 5 + r.Intn(img.height/2) + int(fontSize/2)
+			y := 5 + rand.IntN(img.height/2) + int(fontSize/2)
 			pt := freetype.Pt(x, y)
 
 			_, err = c.DrawString(string(s), pt)
@@ -198,19 +195,19 @@ func Curve() Option {
 		random := func(min, max int64) float64 {
 			decimal := rand.Float64()
 			if max <= 0 {
-				return (float64(rand.Int63n((min*-1)-(max*-1))+(max*-1)) + decimal) * -1
+				return (float64(rand.Int64N((min*-1)-(max*-1))+(max*-1)) + decimal) * -1
 			}
 			if min < 0 && max > 0 {
 				if rand.Int()%2 == 0 {
-					return float64(rand.Int63n(max)) + decimal
+					return float64(rand.Int64N(max)) + decimal
 				} else {
-					return (float64(rand.Int63n(min*-1)) + decimal) * -1
+					return (float64(rand.Int64N(min*-1)) + decimal) * -1
 				}
 			}
-			return float64(rand.Int63n(max-min)+min) + decimal
+			return float64(rand.Int64N(max-min)+min) + decimal
 		}
 
-		a := r.Intn(img.height / 2)                            // Amplitude
+		a := rand.IntN(img.height / 2)                         // Amplitude
 		b := random(int64(-img.height/4), int64(img.height/4)) // Y-axis offset
 		f := random(int64(-img.height/4), int64(img.height/4)) // X-axis offset
 		// Period
@@ -224,9 +221,9 @@ func Curve() Option {
 
 		end := int(random(int64(float64(img.width)*0.8), int64(img.width)))
 		c := color.RGBA{
-			R: uint8(r.Intn(150)),
-			G: uint8(r.Intn(150)),
-			B: uint8(r.Intn(150)),
+			R: uint8(rand.IntN(150)),
+			G: uint8(rand.IntN(150)),
+			B: uint8(rand.IntN(150)),
 			A: uint8(255),
 		}
 

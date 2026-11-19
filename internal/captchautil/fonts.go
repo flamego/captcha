@@ -7,6 +7,7 @@ package captchautil
 
 import (
 	"embed"
+	"math/rand/v2"
 	"path"
 	"sync"
 
@@ -57,6 +58,6 @@ func randFontFamily() (*truetype.Font, error) {
 		return nil, fontFamilyErr
 	}
 
-	name := fontFamilyNames[r.Intn(len(fontFamilyNames))]
+	name := fontFamilyNames[rand.IntN(len(fontFamilyNames))]
 	return fontFamilies[name], nil
 }

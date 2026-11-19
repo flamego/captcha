@@ -6,15 +6,16 @@
 package captchautil
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"image/color"
 	"math"
 	"math/big"
+	"math/rand/v2"
 )
 
 func randomDeepColor() color.RGBA {
 	randColor := randomColor()
-	increase := float64(30 + r.Intn(255))
+	increase := float64(30 + rand.IntN(255))
 
 	red := math.Abs(math.Min(float64(randColor.R)-increase, 255))
 	green := math.Abs(math.Min(float64(randColor.G)-increase, 255))
@@ -28,8 +29,8 @@ func randomDeepColor() color.RGBA {
 }
 
 func randomColor() color.RGBA {
-	red := r.Intn(255)
-	green := r.Intn(255)
+	red := rand.IntN(255)
+	green := rand.IntN(255)
 	blue := 0
 	if (red + green) <= 400 {
 		blue = 400 - green - red
@@ -47,9 +48,9 @@ func randomColor() color.RGBA {
 
 // RandomLightColor returns a random light color.
 func RandomLightColor() color.RGBA {
-	red := r.Intn(55) + 200
-	green := r.Intn(55) + 200
-	blue := r.Intn(55) + 200
+	red := rand.IntN(55) + 200
+	green := rand.IntN(55) + 200
+	blue := rand.IntN(55) + 200
 	return color.RGBA{
 		R: uint8(red),
 		G: uint8(green),
@@ -63,7 +64,7 @@ func RandomText(n int) (string, error) {
 	const alphanum = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	randomInt := func(max *big.Int) (int, error) {
-		r, err := rand.Int(rand.Reader, max)
+		r, err := crand.Int(crand.Reader, max)
 		if err != nil {
 			return 0, err
 		}
