@@ -105,26 +105,60 @@ func Text(text string) Option {
 		ink := randomDeepColor()
 
 		d := &font.Drawer{Dst: layer, Src: image.NewUniform(ink)}
-		step := w * 0.8 / float64(len(text)) * 0.85 // 15% overlap
+		cell := w * 0.8 / float64(len(text)) // widest a character may be
+		step := cell * 0.85                  // 15% overlap
 		x := (w - step*float64(len(text))) / 2
+		// Keep characters off the border and within reach of the vertical warp.
+		margin := min(6, h/4)
 		for _, s := range text {
 			f, err := randFontFamily()
 			if err != nil {
 				return errors.Wrap(err, "Text: get random font family")
 			}
-			size := h * (0.62 + rand.Float64()*0.18)
-			face, err := opentype.NewFace(f, &opentype.FaceOptions{
-				Size:    size,
-				DPI:     img.dpi,
-				Hinting: font.HintingFull,
-			})
-			if err != nil {
-				return errors.Wrap(err, "Text: create font face")
+			newFace := func(size float64) (font.Face, error) {
+				face, err := opentype.NewFace(f, &opentype.FaceOptions{
+					Size:    size,
+					DPI:     img.dpi,
+					Hinting: font.HintingFull,
+				})
+				return face, errors.Wrap(err, "Text: create font face")
 			}
 
-			y := h/2 + size/3 + (rand.Float64()-0.5)*h*0.15
+			size := h * (0.62 + rand.Float64()*0.18)
+			face, err := newFace(size)
+			if err != nil {
+				return err
+			}
+			// glyphBounds returns the pixels the character covers around the dot.
+			glyphBounds := func() (left, top, right, bottom float64) {
+				b, _, _ := face.GlyphBounds(s)
+				return float64(b.Min.X.Floor()), float64(b.Min.Y.Floor()), float64(b.Max.X.Ceil()), float64(b.Max.Y.Ceil())
+			}
+
+			// Shrink characters that are too wide for their cell or too tall for
+			// the image, such as with long text or a high DPI. Hinting rounds the
+			// shrunk glyph, so it can take another try to fit.
+			left, top, right, bottom := glyphBounds()
+			for range 3 {
+				scale := min(cell/(right-left), (h-2*margin)/(bottom-top))
+				if scale >= 1 {
+					break
+				}
+				_ = face.Close()
+				size *= scale
+				face, err = newFace(size)
+				if err != nil {
+					return err
+				}
+				left, top, right, bottom = glyphBounds()
+			}
+
+			// Center the character in its step and vertically, jitter it up or
+			// down, and keep its ascender and descender inside the margins.
+			y := (h-top-bottom)/2 + (rand.Float64()-0.5)*h*0.15
+			y = max(min(y, h-margin-bottom), margin-top)
 			d.Face = face
-			d.Dot = fixed.P(int(x), int(y))
+			d.Dot = fixed.P(int(x+(step-right+left)/2-left), int(y))
 			d.DrawString(string(s))
 			_ = face.Close()
 			x += step
