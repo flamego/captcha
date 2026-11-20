@@ -1,7 +1,3 @@
-// Copyright 2021 Flamego. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package captcha
 
 import (
@@ -39,7 +35,7 @@ func (c *captcha) HTML() template.HTML {
 	return template.HTML(
 		fmt.Sprintf(`
 <a class="captcha" href="javascript:" tabindex="-1">
-	<img onclick="this.src=('%[1]simage.jpeg?refresh=true')" src="%[1]simage.jpeg">
+	<img onclick="this.src=('%[1]simage.png?refresh=true&amp;t='+Date.now())" src="%[1]simage.png">
 </a>`,
 			c.urlPrefix),
 	)
@@ -141,9 +137,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 		img, err := captchautil.CreateImage(
 			opt.Width, opt.Height, opt.DPI, captchautil.RandomLightColor(),
 			captchautil.Noise(captchautil.ComplexityLow),
-			captchautil.TextNoise(captchautil.ComplexityLow),
 			captchautil.Text(text),
-			captchautil.Curve(),
 			captchautil.Border(
 				color.RGBA{R: 170, G: 170, B: 170, A: 255},
 			),
@@ -152,6 +146,7 @@ func Captchaer(opts ...Options) flamego.Handler {
 			panic("captcha: create image: " + err.Error())
 		}
 
+		c.ResponseWriter().Header().Set("Content-Type", "image/png")
 		c.ResponseWriter().Header().Set("Cache-Control", "no-store")
 		c.ResponseWriter().WriteHeader(http.StatusOK)
 		err = img.Encode(c.ResponseWriter())

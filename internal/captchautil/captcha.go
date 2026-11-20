@@ -1,26 +1,19 @@
-// Copyright 2016 Minho. All rights reserved.
-// Copyright 2021 Flamego. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package captchautil
 
 import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
+	"image/png"
 	"io"
 	"math"
-	"math/rand"
-	"time"
+	"math/rand/v2"
 
-	"github.com/golang/freetype"
 	"github.com/pkg/errors"
 	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/math/fixed"
 )
-
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Complexity int
 
@@ -62,9 +55,9 @@ func CreateImage(width, height, dpi int, bgColor color.RGBA, opts ...Option) (*I
 	return img, nil
 }
 
-// Encode encodes the final JPEG image to the given writer.
+// Encode encodes the final PNG image to the given writer.
 func (img *Image) Encode(w io.Writer) error {
-	return jpeg.Encode(w, img.nrgba, &jpeg.Options{Quality: 100})
+	return png.Encode(w, img.nrgba)
 }
 
 // Noise draws background noise on the image.
@@ -81,10 +74,10 @@ func Noise(complex Complexity) Option {
 		}
 		maxSize := (img.height * img.width) / density
 		for range maxSize {
-			rw := r.Intn(img.width)
-			rh := r.Intn(img.height)
+			rw := rand.IntN(img.width)
+			rh := rand.IntN(img.height)
 			img.nrgba.Set(rw, rh, randomColor())
-			size := r.Intn(maxSize)
+			size := rand.IntN(maxSize)
 			if size%3 == 0 {
 				img.nrgba.Set(rw+1, rh+1, randomColor())
 			}
@@ -93,88 +86,148 @@ func Noise(complex Complexity) Option {
 	}
 }
 
-// TextNoise draws background text noise on the image.
-func TextNoise(complex Complexity) Option {
-	return func(img *Image) error {
-		density := 1500
-		switch complex {
-		case ComplexityLow:
-			density = 2000
-		case ComplexityMedium:
-			density = 1500
-		case ComplexityHigh:
-			density = 1000
-		}
-		maxSize := (img.height * img.width) / density
-
-		c := freetype.NewContext()
-		c.SetDPI(img.dpi)
-		c.SetClip(img.nrgba.Bounds())
-		c.SetDst(img.nrgba)
-		c.SetHinting(font.HintingFull)
-		rawFontSize := float64(img.height) / (1 + float64(r.Intn(7))/float64(10))
-
-		for range maxSize {
-			text, err := RandomText(1)
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: get random text")
-			}
-			fontSize := rawFontSize/2 + float64(r.Intn(5))
-
-			c.SetSrc(image.NewUniform(RandomLightColor()))
-			c.SetFontSize(fontSize)
-
-			f, err := randFontFamily()
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: get random font family")
-			}
-			c.SetFont(f)
-
-			rw := r.Intn(img.width)
-			rh := r.Intn(img.height)
-			pt := freetype.Pt(rw, rh)
-
-			_, err = c.DrawString(text, pt)
-			if err != nil {
-				return errors.Wrap(err, "TextNoise: draw string")
-			}
-		}
-		return nil
-	}
-}
-
-// Text draws text on the image.
+// Text draws text on the image. All characters share one color, sit close
+// enough to touch, have a line drawn through them, and are warped together, so
+// they are hard to split into single characters.
 func Text(text string) Option {
 	return func(img *Image) error {
-		c := freetype.NewContext()
-		c.SetDPI(img.dpi)
-		c.SetClip(img.nrgba.Bounds())
-		c.SetDst(img.nrgba)
-		c.SetHinting(font.HintingFull)
+		if text == "" {
+			return nil
+		}
 
-		fontWidth := img.width / len(text)
-		for i, s := range text {
-			fontSize := float64(img.height) / (1 + float64(r.Intn(7))/float64(9))
-			c.SetSrc(image.NewUniform(randomDeepColor()))
-			c.SetFontSize(fontSize)
+		w, h := float64(img.width), float64(img.height)
+		layer := image.NewNRGBA(img.nrgba.Bounds())
+		ink := randomDeepColor()
 
+		d := &font.Drawer{Dst: layer, Src: image.NewUniform(ink)}
+		cell := w * 0.8 / float64(len(text)) // widest a character may be
+		step := cell * 0.85                  // 15% overlap
+		x := (w - step*float64(len(text))) / 2
+		// Keep characters off the border and within reach of the vertical warp.
+		margin := min(6, h/4)
+		for _, s := range text {
 			f, err := randFontFamily()
 			if err != nil {
 				return errors.Wrap(err, "Text: get random font family")
 			}
-			c.SetFont(f)
+			newFace := func(size float64) (font.Face, error) {
+				face, err := opentype.NewFace(f, &opentype.FaceOptions{
+					Size:    size,
+					DPI:     img.dpi,
+					Hinting: font.HintingFull,
+				})
+				return face, errors.Wrap(err, "Text: create font face")
+			}
 
-			x := (fontWidth)*i + (fontWidth)/int(fontSize)
-			y := 5 + r.Intn(img.height/2) + int(fontSize/2)
-			pt := freetype.Pt(x, y)
-
-			_, err = c.DrawString(string(s), pt)
+			size := h * (0.62 + rand.Float64()*0.18)
+			face, err := newFace(size)
 			if err != nil {
-				return errors.Wrap(err, "Text: draw string")
+				return err
+			}
+			// glyphBounds returns the pixels the character covers around the dot.
+			glyphBounds := func() (left, top, right, bottom float64) {
+				b, _, _ := face.GlyphBounds(s)
+				return float64(b.Min.X.Floor()), float64(b.Min.Y.Floor()), float64(b.Max.X.Ceil()), float64(b.Max.Y.Ceil())
+			}
+
+			// Shrink characters that are too wide for their cell or too tall for
+			// the image, such as with long text or a high DPI. Hinting rounds the
+			// shrunk glyph, so it can take another try to fit.
+			left, top, right, bottom := glyphBounds()
+			for range 3 {
+				scale := min(cell/(right-left), (h-2*margin)/(bottom-top))
+				if scale >= 1 {
+					break
+				}
+				_ = face.Close()
+				size *= scale
+				face, err = newFace(size)
+				if err != nil {
+					return err
+				}
+				left, top, right, bottom = glyphBounds()
+			}
+
+			// Center the character in its step and vertically, jitter it up or
+			// down, and keep its ascender and descender inside the margins.
+			y := (h-top-bottom)/2 + (rand.Float64()-0.5)*h*0.15
+			y = max(min(y, h-margin-bottom), margin-top)
+			d.Face = face
+			d.Dot = fixed.P(int(x+(step-right+left)/2-left), int(y))
+			d.DrawString(string(s))
+			_ = face.Close()
+			x += step
+		}
+
+		// Strike a wavy line through the characters in the same color.
+		amp := h * 0.08
+		period := w * (0.6 + rand.Float64()*0.4)
+		phase := rand.Float64() * 2 * math.Pi
+		mid := h/2 + (rand.Float64()-0.5)*h*0.2
+		for px := img.width / 12; px < img.width-img.width/12; px++ {
+			py := int(mid + amp*math.Sin(2*math.Pi*float64(px)/period+phase))
+			for t := -1; t <= 1; t++ {
+				layer.Set(px, py+t, ink)
 			}
 		}
+
+		// Warp less on small images so the margins still keep ink off the border.
+		draw.Draw(img.nrgba, img.nrgba.Bounds(), warp(layer, min(4, w/48), min(5, h/16)), image.Point{}, draw.Over)
 		return nil
 	}
+}
+
+// warp displaces every pixel of src along two sine waves, up to ax pixels
+// horizontally and ay pixels vertically, sampling bilinearly.
+func warp(src *image.NRGBA, ax, ay float64) *image.NRGBA {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	dst := image.NewNRGBA(b)
+	periodX := float64(w) * (0.4 + rand.Float64()*0.3)
+	periodY := float64(h) * (0.8 + rand.Float64()*0.6)
+	phaseX, phaseY := rand.Float64()*2*math.Pi, rand.Float64()*2*math.Pi
+
+	at := func(x, y int) color.NRGBA {
+		if x < 0 || y < 0 || x >= w || y >= h {
+			return color.NRGBA{}
+		}
+		return src.NRGBAAt(x, y)
+	}
+	for y := range h {
+		for x := range w {
+			sx := float64(x) + ax*math.Sin(2*math.Pi*float64(y)/periodY+phaseX)
+			sy := float64(y) + ay*math.Sin(2*math.Pi*float64(x)/periodX+phaseY)
+			x0, y0 := int(math.Floor(sx)), int(math.Floor(sy))
+			fx, fy := sx-float64(x0), sy-float64(y0)
+
+			// Premultiply by alpha so transparent neighbors do not darken edges.
+			var r, g, bl, a float64
+			for _, s := range [4]struct {
+				c      color.NRGBA
+				weight float64
+			}{
+				{at(x0, y0), (1 - fx) * (1 - fy)},
+				{at(x0+1, y0), fx * (1 - fy)},
+				{at(x0, y0+1), (1 - fx) * fy},
+				{at(x0+1, y0+1), fx * fy},
+			} {
+				sa := float64(s.c.A) * s.weight
+				r += float64(s.c.R) * sa
+				g += float64(s.c.G) * sa
+				bl += float64(s.c.B) * sa
+				a += sa
+			}
+			if a > 0 {
+				dst.SetNRGBA(x, y, color.NRGBA{
+					R: uint8(math.Round(r / a)),
+					G: uint8(math.Round(g / a)),
+					B: uint8(math.Round(bl / a)),
+					A: uint8(math.Round(a)),
+				})
+			}
+		}
+	}
+	return dst
 }
 
 // Border draws border on the image.
@@ -187,59 +240,6 @@ func Border(color color.RGBA) Option {
 		for y := 0; y < img.height; y++ {
 			img.nrgba.Set(0, y, color)
 			img.nrgba.Set(img.width-1, y, color)
-		}
-		return nil
-	}
-}
-
-// Curve draws a curve on the image.
-func Curve() Option {
-	return func(img *Image) error {
-		random := func(min, max int64) float64 {
-			decimal := rand.Float64()
-			if max <= 0 {
-				return (float64(rand.Int63n((min*-1)-(max*-1))+(max*-1)) + decimal) * -1
-			}
-			if min < 0 && max > 0 {
-				if rand.Int()%2 == 0 {
-					return float64(rand.Int63n(max)) + decimal
-				} else {
-					return (float64(rand.Int63n(min*-1)) + decimal) * -1
-				}
-			}
-			return float64(rand.Int63n(max-min)+min) + decimal
-		}
-
-		a := r.Intn(img.height / 2)                            // Amplitude
-		b := random(int64(-img.height/4), int64(img.height/4)) // Y-axis offset
-		f := random(int64(-img.height/4), int64(img.height/4)) // X-axis offset
-		// Period
-		var t float64
-		if img.height > img.width/2 {
-			t = random(int64(img.width/2), int64(img.height))
-		} else {
-			t = random(int64(img.height), int64(img.width/2))
-		}
-		w := (2 * math.Pi) / t
-
-		end := int(random(int64(float64(img.width)*0.8), int64(img.width)))
-		c := color.RGBA{
-			R: uint8(r.Intn(150)),
-			G: uint8(r.Intn(150)),
-			B: uint8(r.Intn(150)),
-			A: uint8(255),
-		}
-
-		py := float64(0)
-		for px := range end {
-			if w != 0 {
-				py = float64(a)*math.Sin(w*float64(px)+f) + b + (float64(img.width) / float64(5))
-				i := img.height / 5
-				for i > 0 {
-					img.nrgba.Set(px+i, int(py), c)
-					i--
-				}
-			}
 		}
 		return nil
 	}
